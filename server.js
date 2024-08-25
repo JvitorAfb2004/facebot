@@ -1,23 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const https = require('https');
-const fs = require('fs');
-
-// Carregar certificados SSL
-const options = {
-    key: fs.readFileSync('privkey.pem'),
-    cert: fs.readFileSync('fullchain.pem')
-};
-
-// Substitua pelos seus tokens diretamente aqui
-const VERIFY_TOKEN = 'geniussolucoes';
-const PAGE_ACCESS_TOKEN = 'EAAO7DxyrBvsBOy5mwEc4yGRpdXjf1uZA3RRcOoqldSJsIZAulZBgnUJB7dHRtSK8bynbZAHXofeMUyZBoBgZAUsZAfCYrwqUmjBa5XCCHoNjcv8z9d75tc44OVsTbWKQCn9GPtxOvRJqnQgqtshKgwIjwk9ZAaitXjEtAPwYQKFhRtafQi77Kh21xQNdoxVA2YNyLu1oEbM4qUIZD';
 
 const app = express();
 app.use(bodyParser.json());
 
-// Verificar Webhook (Facebook exige verificação)
+// Coloque seus tokens diretamente no código (mais simples)
+const VERIFY_TOKEN = 'meu_verify_token';
+const PAGE_ACCESS_TOKEN = 'EAAO7DxyrBvsBOy5mwEc4yGRpdXjf1uZA3RRcOoqldSJsIZAulZBgnUJB7dHRtSK8bynbZAHXofeMUyZBoBgZAUsZAfCYrwqUmjBa5XCCHoNjcv8z9d75tc44OVsTbWKQCn9GPtxOvRJqnQgqtshKgwIjwk9ZAaitXjEtAPwYQKFhRtafQi77Kh21xQNdoxVA2YNyLu1oEbM4qUIZD';
+
+// Verificar o Webhook (necessário para o Facebook)
 app.get('/webhook', (req, res) => {
     let mode = req.query['hub.mode'];
     let token = req.query['hub.verify_token'];
@@ -30,34 +22,47 @@ app.get('/webhook', (req, res) => {
     }
 });
 
-// Receber eventos
+// Receber eventos de mensagens
 app.post('/webhook', (req, res) => {
-    const body = req.body;
+    let body = req.body;
 
     if (body.object === 'page') {
-        body.entry.forEach(entry => {
+        body.entry.forEach(function(entry) {
             let webhookEvent = entry.messaging[0];
             let senderId = webhookEvent.sender.id;
 
-            // Enviar mensagem de redirecionamento para o WhatsApp
-            sendWhatsAppRedirect(senderId);
+            sendMessageWithButtons(senderId);
         });
-
         res.status(200).send('EVENT_RECEIVED');
     } else {
         res.sendStatus(404);
     }
 });
 
-// Função para enviar resposta automática
-function sendWhatsAppRedirect(senderId) {
-    const messageData = {
-        messaging_type: 'RESPONSE',
-        recipient: {
-            id: senderId
-        },
+// Função para enviar mensagem com botões
+function sendMessageWithButtons(senderId) {
+    let messageData = {
+        recipient: { id: senderId },
         message: {
-            text: 'Olá! Para continuar, por favor, entre em contato conosco pelo WhatsApp: https://wa.me/5574981150370'
+            attachment: {
+                type: "template",
+                payload: {
+                    template_type: "button",
+                    text: "Confira as delícias da Coxinha Gourmet & Hamburgueria na nossa loja virtual ou fale conosco pelo WhatsApp. Estamos aqui para ajudar!:",
+                    buttons: [
+                        {
+                            type: "web_url",
+                            url: "https://bit.ly/lojacoxinhagourmet",
+                            title: "Visite a Loja"
+                        },
+                        {
+                            type: "web_url",
+                            url: "https://wa.me/5574981150370",
+                            title: "Fale no WhatsApp"
+                        }
+                    ]
+                }
+            }
         }
     };
 
@@ -66,12 +71,11 @@ function sendWhatsAppRedirect(senderId) {
             console.log('Mensagem enviada com sucesso!');
         })
         .catch(error => {
-            console.error('Erro ao enviar a mensagem: ', error);
+            console.error('Erro ao enviar a mensagem:', error);
         });
 }
 
-// Iniciar o servidor HTTPS
-const PORT = process.env.PORT || 3000;
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`Servidor rodando em HTTPS na porta ${PORT}`);
+// Iniciar o servidor
+app.listen(3000, () => {
+    console.log('Servidor rodando na porta 3000');
 });
